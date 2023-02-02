@@ -5,17 +5,39 @@ use std::process::Command;
 pub mod vectors;
 pub mod ray;
 use vectors::{Vec3, Point3, Color};
-fn main() {
-    const IMAGE_WIDTH: u32 = 256;
-    const IMAGE_HEIGHT: u32 = 256;
+use ray::Ray;
 
+fn ray_color(r: &Ray) -> Color {
+    let unit_direction = r.direction.unit_vector();
+    let t = (unit_direction.y + 1.0) * 0.5;
+    Color::from(1.0, 1.0, 1.0) * (1.0 - t) + Color::from(0.5, 0.7, 1.0) * t
+}
+
+fn main() {
+    // IMAGE
+    const ASPECT_RATIO: f64 = 16.0 / 9.0;
+    const IMAGE_WIDTH: u32 = 400;
+    const IMAGE_HEIGHT: u32 = (IMAGE_WIDTH as f64 / ASPECT_RATIO as f64) as u32;
+
+    // CAMERA
+    let viewpoint_height = 2.0;
+    let viewpoint_width = ASPECT_RATIO * viewpoint_height;
+    let focal_length = 1.0;
+
+    let origin = Point3::new();
+    let horizontal = Vec3::from(viewpoint_width, 0.0, 0.0);
+    let vertical = Vec3::from(0.0, viewpoint_height, 0.0);
+    let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3::from(0.0, 0.0, focal_length);
+
+    // RENDERING
     let mut img = ImageBuffer::new(IMAGE_WIDTH, IMAGE_HEIGHT);
 
     for (x, y, pixel) in img.enumerate_pixels_mut() {
-        let r = x as f64 / (IMAGE_WIDTH - 1) as f64;
-        let g = y as f64 / (IMAGE_HEIGHT - 1) as f64;
-        let b = 0.25;
-        let color = Color::new(r, g, b);
+        let u  = (x as f64) / (IMAGE_WIDTH - 1) as f64;
+        let v  = (y as f64) / (IMAGE_HEIGHT - 1) as f64;
+        
+        let r = Ray::from(origin, lower_left_corner + horizontal * u + vertical * v - origin);
+        let color = ray_color(&r);
 
         *pixel = Rgb([
             (255.999 * color.x) as u8,
